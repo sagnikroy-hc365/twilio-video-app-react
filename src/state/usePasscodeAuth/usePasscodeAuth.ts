@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 
 const endpoint = process.env.REACT_APP_TOKEN_ENDPOINT || '/token';
 
@@ -60,7 +60,12 @@ export function getErrorMessage(message: string) {
 export default function usePasscodeAuth() {
   const history = useHistory();
 
+  const PASSCODE_STORAGE_NAME = 'passcode';
+  const DISPLAYNAME_STORAGE_NAME = 'displayName';
+  const ROOMNAME_STORAGE_NAME = 'roomName';
+
   const [user, setUser] = useState<{ displayName: undefined; photoURL: undefined; passcode: string } | null>(null);
+  const [stateRoomName, setStateRoomName] = useState<string>('');
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   const getToken = useCallback(
@@ -103,15 +108,36 @@ export default function usePasscodeAuth() {
     [user]
   );
 
+  function useQuery() {
+    return new URLSearchParams(useLocation().search);
+  }
+
+  let query = useQuery();
   useEffect(() => {
+    function getUserDisplayName() {
+      let match = query.get('userName') || query.get('user');
+      const userName = match ? match : window.sessionStorage.getItem(DISPLAYNAME_STORAGE_NAME);
+      return userName;
+    }
+    function getRoomName(): string {
+      // return query.get("roomName") || '';
+      let match = query.get('roomName');
+      const roomName = match ? match : window.sessionStorage.getItem(ROOMNAME_STORAGE_NAME);
+      return roomName || '';
+    }
     const passcode = getPasscode();
+    const displayName = getUserDisplayName();
+    const urlRoomName = getRoomName();
 
     if (passcode) {
       verifyPasscode(passcode)
         .then(verification => {
           if (verification?.isValid) {
-            setUser({ passcode } as any);
-            window.sessionStorage.setItem('passcode', passcode);
+            setUser({ displayName, passcode } as any);
+            setStateRoomName(urlRoomName);
+            window.sessionStorage.setItem(PASSCODE_STORAGE_NAME, passcode);
+            window.sessionStorage.setItem(DISPLAYNAME_STORAGE_NAME, displayName || '');
+            window.sessionStorage.setItem(ROOMNAME_STORAGE_NAME, urlRoomName);
             history.replace(window.location.pathname);
           }
         })
@@ -125,7 +151,7 @@ export default function usePasscodeAuth() {
     return verifyPasscode(passcode).then(verification => {
       if (verification?.isValid) {
         setUser({ passcode } as any);
-        window.sessionStorage.setItem('passcode', passcode);
+        window.sessionStorage.setItem(PASSCODE_STORAGE_NAME, passcode);
       } else {
         throw new Error(getErrorMessage(verification?.error));
       }
@@ -134,9 +160,12 @@ export default function usePasscodeAuth() {
 
   const signOut = useCallback(() => {
     setUser(null);
-    window.sessionStorage.removeItem('passcode');
+    setStateRoomName('');
+    window.sessionStorage.removeItem(PASSCODE_STORAGE_NAME);
+    window.sessionStorage.removeItem(DISPLAYNAME_STORAGE_NAME);
+    window.sessionStorage.removeItem(ROOMNAME_STORAGE_NAME);
     return Promise.resolve();
   }, []);
 
-  return { user, isAuthReady, getToken, signIn, signOut, updateRecordingRules };
+  return { user, stateRoomName, isAuthReady, getToken, signIn, signOut, updateRecordingRules };
 }

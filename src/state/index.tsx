@@ -12,6 +12,7 @@ export interface StateContextType {
   setError(error: TwilioError | Error | null): void;
   getToken(name: string, room: string, passcode?: string): Promise<{ room_type: RoomType; token: string }>;
   user?: User | null | { displayName: undefined; photoURL: undefined; passcode?: string };
+  stateRoomName?: string;
   signIn?(passcode?: string): Promise<void>;
   signOut?(): Promise<void>;
   isAuthReady?: boolean;

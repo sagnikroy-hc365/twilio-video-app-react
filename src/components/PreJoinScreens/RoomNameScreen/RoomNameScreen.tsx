@@ -1,4 +1,5 @@
-import React, { ChangeEvent, FormEvent } from 'react';
+import React, { ChangeEvent, FormEvent, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Typography, makeStyles, TextField, Grid, Button, InputLabel, Theme } from '@material-ui/core';
 import { useAppState } from '../../../state';
 
@@ -39,6 +40,10 @@ export default function RoomNameScreen({ name, roomName, setName, setRoomName, h
   const classes = useStyles();
   const { user } = useAppState();
 
+  /*
+    These 'handle<variable>Change functions, were used when the user could manually add
+    their name and the room then wanted to join (name and roomName respectively).
+  */
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
   };
@@ -47,21 +52,61 @@ export default function RoomNameScreen({ name, roomName, setName, setRoomName, h
     setRoomName(event.target.value);
   };
 
-  const hasUsername = !window.location.search.includes('customIdentity=true') && user?.displayName;
+  function useQuery() {
+    return new URLSearchParams(useLocation().search);
+  }
+
+  let query = useQuery();
+
+  // same as ngOnInit
+  useEffect(() => {
+    // get the roomName from the queryParams
+    if (!roomName) {
+      let room = query.get('roomName');
+      if (room) setRoomName(room);
+    }
+
+    // get the userName from the queryParams
+    if (!name) {
+      let userName = query.get('userName') || query.get('user');
+      if (userName) setName(userName);
+    }
+  }, [query]);
+
+  // const hasUsername = !window.location.search.includes('customIdentity=true') && user?.displayName;
+  const hasUsername = window.location.search.includes('user=') || user;
+  const hasRoomName = window.location.search.includes('roomName=') || roomName;
+
+  function capitalize(str: string) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
 
   return (
     <>
       <Typography variant="h5" className={classes.gutterBottom}>
         Join a Room
       </Typography>
-      <Typography variant="body1">
-        {hasUsername
-          ? "Enter the name of a room you'd like to join."
+      {/* <Typography variant="body1">
+        {hasUsername && hasRoomName
+          ? "Hello " + capitalize(name) + "! Whenever you're ready, hit Continue to go straight into the waiting room."
+          : hasUsername && !hasRoomName
+          ? "Hello " + capitalize(name) + "! Please enter the name of a room you'd like to join."
           : "Enter your name and the name of a room you'd like to join"}
+      </Typography> */}
+      <Typography variant="body1">
+        {hasUsername && hasRoomName
+          ? 'Hello ' + capitalize(name) + "! Whenever you're ready, hit Continue to go straight into the waiting room."
+          : 'There was an issue getting either your Name or Room. Please go back and try again.'}
       </Typography>
+      {(!hasUsername || !hasRoomName) && (
+        <Typography variant="body1">
+          <br></br>
+          If this problems persists, please contact support.
+        </Typography>
+      )}
       <form onSubmit={handleSubmit}>
         <div className={classes.inputContainer}>
-          {!hasUsername && (
+          {/* {!hasUsername && (
             <div className={classes.textFieldContainer}>
               <InputLabel shrink htmlFor="input-user-name">
                 Your Name
@@ -75,21 +120,23 @@ export default function RoomNameScreen({ name, roomName, setName, setRoomName, h
                 onChange={handleNameChange}
               />
             </div>
-          )}
-          <div className={classes.textFieldContainer}>
-            <InputLabel shrink htmlFor="input-room-name">
-              Room Name
-            </InputLabel>
-            <TextField
-              autoCapitalize="false"
-              id="input-room-name"
-              variant="outlined"
-              fullWidth
-              size="small"
-              value={roomName}
-              onChange={handleRoomNameChange}
-            />
-          </div>
+          )} */}
+          {/* {!hasRoomName && (
+            <div className={classes.textFieldContainer}>
+              <InputLabel shrink htmlFor="input-room-name">
+                Room Name
+              </InputLabel>
+              <TextField
+                autoCapitalize="false"
+                id="input-room-name"
+                variant="outlined"
+                fullWidth
+                size="small"
+                value={roomName}
+                onChange={handleRoomNameChange}
+              />
+            </div>
+          )} */}
         </div>
         <Grid container justify="flex-end">
           <Button
